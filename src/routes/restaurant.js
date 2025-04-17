@@ -6,6 +6,7 @@ const router = express.Router();
 // Get all restaurants
 router.get('/', async (req, res) => {
   try {
+
     const result = await pool.query('SELECT * FROM restaurant');
     return res.json(result.rows);
   } catch (error) {
@@ -13,5 +14,7 @@ router.get('/', async (req, res) => {
     return res.status(500).json({ message: 'Internal server error' });
   }
 });
+
+
 
 export default router;

@@ -2,16 +2,15 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 
-// Load environment variables
 dotenv.config();
 
-// Hashing password
+// Hash password
 export const hashPassword = async (password) => {
   const salt = await bcrypt.genSalt(10);
   return bcrypt.hash(password, salt);
 };
 
-// Verifying password
+// Verify password
 export const verifyPassword = async (plainPassword, hashedPassword) => {
   return bcrypt.compare(plainPassword, hashedPassword);
 };
@@ -32,7 +31,7 @@ export const createRefreshToken = (data) => {
   });
 };
 
-// Decode and verify token
+// Verify token
 export const verifyToken = (token) => {
   try {
     return jwt.verify(token, process.env.SECRET_KEY);
