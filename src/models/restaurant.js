@@ -69,3 +69,43 @@ export const getRestaurants = async ({ cuisine_ids, limit, offset }) => {
     const result = await pool.query(query);
     return result.rows[0].total_count;
   };
+
+  // Function to fetch a restaurant by ID
+export const getRestaurantById = async (restaurantId) => {
+    const query = 'SELECT * FROM restaurants WHERE id = $1';
+    const result = await pool.query(query, [restaurantId]);
+    return result.rows[0];
+  };
+  
+  // Function to update a restaurant's details
+  export const updateRestaurantDetails = async (restaurantId, updatedData) => {
+    const query = `
+      UPDATE restaurants
+      SET name = $1, description = $2, logo = $3
+      WHERE id = $4
+      RETURNING *;
+    `;
+    const values = [updatedData.name, updatedData.description, updatedData.logo, restaurantId];
+    const result = await pool.query(query, values);
+    return result.rows[0];
+  };
+  
+  // Function to get cuisines by IDs
+  export const getCuisinesByIds = async (cuisineIds) => {
+    const query = `SELECT * FROM cuisines WHERE id = ANY($1::int[])`;
+    const result = await pool.query(query, [cuisineIds]);
+    return result.rows;
+  };
+  
+  // Function to associate cuisines with the restaurant
+  export const updateRestaurantCuisines = async (restaurantId, cuisineIds) => {
+    // First, remove all existing cuisines associated with the restaurant
+    await pool.query('DELETE FROM restaurant_cuisines WHERE restaurant_id = $1', [restaurantId]);
+  
+    // Now, insert new cuisine associations
+    const query = `
+      INSERT INTO restaurant_cuisines (restaurant_id, cuisine_id)
+      SELECT $1, unnest($2::int[])
+    `;
+    await pool.query(query, [restaurantId, cuisineIds]);
+  };
