@@ -72,23 +72,35 @@ export const getRestaurants = async ({ cuisine_ids, limit, offset }) => {
 
   // Function to fetch a restaurant by ID
 export const getRestaurantById = async (restaurantId) => {
-    const query = 'SELECT * FROM restaurants WHERE id = $1';
-    const result = await pool.query(query, [restaurantId]);
-    return result.rows[0];
+  const restaurantRes = await pool.query("SELECT * FROM restaurants WHERE id = $1", [restaurantId]);
+  const restaurant = restaurantRes.rows[0];
+
+  if (!restaurant) return null;
+
+  const cuisineRes = await pool.query(
+    `SELECT c.id, c.name
+     FROM cuisines c
+     JOIN restaurant_cuisines rc ON c.id = rc.cuisine_id
+     WHERE rc.restaurant_id = $1`,
+    [restaurantId]
+  );
+
+  restaurant.cuisines = cuisineRes.rows;
+  return restaurant;
   };
   
   // Function to update a restaurant's details
-  export const updateRestaurantDetails = async (restaurantId, updatedData) => {
-    const query = `
-      UPDATE restaurants
-      SET name = $1, description = $2, logo = $3
-      WHERE id = $4
-      RETURNING *;
-    `;
-    const values = [updatedData.name, updatedData.description, updatedData.logo, restaurantId];
-    const result = await pool.query(query, values);
-    return result.rows[0];
-  };
+  export const updateRestaurantDetails = async (id, fields) => {
+    const keys = Object.keys(fields);
+    const values = Object.values(fields);
+    if (keys.length === 0) return;
+  
+    const setClause = keys.map((key, i) => `${key} = $${i + 1}`).join(", ");
+    await pool.query(
+      `UPDATE restaurants SET ${setClause} WHERE id = $${keys.length + 1}`,
+      [...values, id]
+    );
+  }
   
   // Function to get cuisines by IDs
   export const getCuisinesByIds = async (cuisineIds) => {

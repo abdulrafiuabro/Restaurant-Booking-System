@@ -1,3 +1,6 @@
 in Auth.js
     create-staff-user
     signin-staff
+
+In restaurant.js
+    delete

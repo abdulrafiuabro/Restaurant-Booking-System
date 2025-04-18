@@ -5,7 +5,10 @@ import { findUserById, findAdminRole, checkIfUserIsAdmin, assignAdminRoleToUser 
 import {LoggedInUser} from '../middleware/authMiddleware.js';
 import multer from 'multer'
 import cloudinary from '../config/cloudinary.js';  // Cloudinary configuration
-import { validateCuisines, createRestaurant, associateCuisinesWithRestaurant, getTotalRestaurantCount,getRestaurants} from '../models/restaurant.js';  // Import functions
+
+import { validateCuisines, createRestaurant, associateCuisinesWithRestaurant, getTotalRestaurantCount,getRestaurants, 
+  getRestaurantById, getCuisinesByIds, updateRestaurantDetails, updateRestaurantCuisines} from '../models/restaurant.js';  // Import functions
+
 import { uploadToCloudinary } from './uploadimg.js'; // Import Cloudinary upload function
 
 
@@ -173,6 +176,36 @@ router.post('/create', upload.single('logo'), async (req, res) => {
   });
 });
 
+router.patch("/:restaurant_id", async (req, res) => {
+  const restaurantId = parseInt(req.params.restaurant_id);
+  const { cuisine_ids, ...updateFields } = req.body;
 
+  try {
+
+    const restaurant = await getRestaurantById(restaurantId);
+    if (!restaurant) {
+      return res.status(404).json({ detail: "Restaurant not found" });
+    }
+
+    // Update fields
+    await updateRestaurantDetails(restaurantId, updateFields);
+
+    // Update cuisines if provided
+    if (cuisine_ids && cuisine_ids.length > 0) {
+      const cuisines = await getCuisinesByIds(cuisine_ids);
+      if (cuisines.length === 0) {
+        return res.status(400).json({ detail: "Invalid cuisine IDs provided" });
+      }
+
+      await updateRestaurantCuisines(restaurantId, cuisine_ids);
+    }
+
+    const updated = await getRestaurantById(restaurantId);
+    res.json(updated);
+  } catch (err) {
+    console.error(err);
+    res.status(err.status || 500).json({ detail: err.message || "Server error" });
+  }
+});
 
 export default router;
