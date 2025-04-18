@@ -5,6 +5,7 @@ import { LoggedInUser } from '../middleware/authMiddleware.js'; // Import the mi
 import { checkIfRoleExists, createRolesIfNotExists, getRoles } from '../models/role.js'; // Custom model functions
 
 
+
 const router = express.Router();
 
 // Signup

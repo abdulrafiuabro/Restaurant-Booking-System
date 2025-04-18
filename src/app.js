@@ -1,6 +1,8 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import authRouter from './routes/auth.js';
+import restaurantRoutes from './routes/restaurant.js';  // Import the restaurant routes
+
 
 // Load environment variables
 dotenv.config();
@@ -11,6 +13,7 @@ app.use(express.json()); // Middleware to parse JSON bodies
 
 // Use routes
 app.use('/auth', authRouter);
+app.use('/restaurant',restaurantRoutes);
 
 // Default route
 app.get('/', (req, res) => {

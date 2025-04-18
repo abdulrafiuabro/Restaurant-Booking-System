@@ -15,6 +15,7 @@ export const LoggedInUser = async (req, res, next) => {
   try {
     // Verify the token
     const decoded = jwt.verify(token, process.env.SECRET_KEY);
+    console.log(decoded); // Log decoded token for debugging
     
     // Fetch the user by email (from the decoded token)
     const user = await findUserByEmail(decoded.sub);
@@ -25,6 +26,7 @@ export const LoggedInUser = async (req, res, next) => {
 
     // Attach the user to the request object
     req.user = user;
+    console.log(req.user + " in middleware");
 
     // Call the next middleware or route handler
     next();

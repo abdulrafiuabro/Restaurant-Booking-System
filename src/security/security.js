@@ -17,7 +17,10 @@ export const verifyPassword = async (plainPassword, hashedPassword) => {
 
 // Create access token
 export const createAccessToken = (data) => {
-  const payload = { sub: data.email };
+  console.log(data.roll_name);
+  const payload = { sub: data.email,
+                    role: data.roll_name
+   };
   return jwt.sign(payload, process.env.SECRET_KEY, {
     expiresIn: `${process.env.ACCESS_TOKEN_EXPIRE_MINUTES}m`,
   });
@@ -25,10 +28,12 @@ export const createAccessToken = (data) => {
 
 // Create refresh token
 export const createRefreshToken = (data) => {
-  const payload = { sub: data.email };
-  return jwt.sign(payload, process.env.SECRET_KEY, {
-    expiresIn: `${process.env.REFRESH_TOKEN_EXPIRE_DAYS}d`,
-  });
+  const payload = { sub: data.email,
+    role: data.roll_name
+};
+return jwt.sign(payload, process.env.SECRET_KEY, {
+expiresIn: `${process.env.ACCESS_TOKEN_EXPIRE_MINUTES}m`,
+});
 };
 
 // Verify token

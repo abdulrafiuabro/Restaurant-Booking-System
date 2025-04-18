@@ -3,7 +3,7 @@ import pool from '../database/database.js';
 // Create a new user
 export const createUser = async (name, email, phone, hashedPassword) => {
   const result = await pool.query(
-    `INSERT INTO users (name, email, phone, hashed_password) VALUES ($1, $2, $3, $4) RETURNING *`,
+    `INSERT INTO users (name, email, phone, password) VALUES ($1, $2, $3, $4) RETURNING *`,
     [name, email, phone, hashedPassword]
   );
   return result.rows[0];
@@ -11,19 +11,17 @@ export const createUser = async (name, email, phone, hashedPassword) => {
 
 // Find user by email
 export const findUserByEmail = async (email) => {
-    const result = await pool.query(
-      'SELECT * FROM users WHERE email = $1',
-      [email]
-    );
-    
-    // Add a check to verify if the result is correctly returned
-    if (result.rows.length === 0) {
-      throw new Error('User not found');
-    }
-  
-    return result.rows[0];
-  };
-
+  const query = `
+    SELECT u.email,u.password,r.name AS role_name
+    FROM users u
+    JOIN employee_mappings em ON em.user_id = u.id
+    JOIN roles r ON r.id = em.role_id
+    WHERE u.email = $1
+  `;
+  const result = await pool.query(query, [email]);
+  console.log(result.rows[0]);
+  return result.rows[0];  // Return the user with role information
+};
 // Find user with roles
 export const findUserWithRole = async (email) => {
   const result = await pool.query(
@@ -115,4 +113,28 @@ export const updateUserPassword = async (userId, hashedPassword) => {
   export const deleteUserFromDB = async (userId) => {
     const result = await pool.query('DELETE FROM users WHERE id = $1 RETURNING *', [userId]);
     return result.rows[0]; // Return the deleted user if needed, else can return a success flag
+  };
+
+  export const findAdminRole = async () => {
+    const query = 'SELECT * FROM roles WHERE name = $1';
+    const result = await pool.query(query, ['admin']);
+    return result.rows[0];  // Return the "admin" role if found, otherwise undefined
+  };
+
+  export const checkIfUserIsAdmin = async (userId) => {
+    const query = `
+      SELECT * FROM employee_mappings
+      WHERE user_id = $1 AND role_id = (SELECT id FROM roles WHERE name = 'admin')
+    `;
+    const result = await pool.query(query, [userId]);
+    return result.rows.length > 0;  // Return true if the user is already an admin
+  };
+
+  export const assignAdminRoleToUser = async (userId, roleId) => {
+    const query = `
+      INSERT INTO employee_mappings (user_id, role_id)
+      VALUES ($1, $2) RETURNING *
+    `;
+    const result = await pool.query(query, [userId, roleId]);
+    return result.rows[0];  // Return the inserted mapping record
   };
