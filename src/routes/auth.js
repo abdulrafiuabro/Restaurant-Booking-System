@@ -1,10 +1,8 @@
 import express from 'express';
-import { createUser, findUserByEmail, updateUserPassword, getUsers, findUserById,updateUserInDB, deleteUserFromDB} from '../models/user.js';
+import { createUser, findUserByEmail, updateUserPassword, getUsers, findUserById,updateUserInDB, deleteUserFromDB, createStaffUser, createEmployeeMapping, getUserByEmail, getRoleById} from '../models/auth.js';
 import { hashPassword, verifyPassword, createAccessToken, createRefreshToken, verifyToken } from '../security/security.js';
 import { LoggedInUser } from '../middleware/authMiddleware.js'; // Import the middleware
 import { checkIfRoleExists, createRolesIfNotExists, getRoles } from '../models/role.js'; // Custom model functions
-
-
 
 const router = express.Router();
 
@@ -153,60 +151,6 @@ router.get('/roles', async (req, res) => {
   }
 });
 
-// router.post('/create_staff_user', async (req, res) => {
-//   const { name, email, phone, password, role_id, restaurant_id, branch_id } = req.body;
-
-//   try {
-//     // Check if the user already exists
-//     const existingUserResult = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
-//     if (existingUserResult.rows.length > 0) {
-//       return res.status(400).json({ message: 'Email already registered' });
-//     }
-
-//     // Check if the role exists
-//     const roleResult = await pool.query('SELECT * FROM roles WHERE id = $1', [role_id]);
-//     if (roleResult.rows.length === 0) {
-//       return res.status(400).json({ message: 'Invalid role ID' });
-//     }
-
-//     // Hash the password
-//     const hashedPassword = await bcrypt.hash(password, 10);
-
-//     // Create a new user
-//     const newUserResult = await pool.query(
-//       'INSERT INTO users (name, email, phone, hashed_password) VALUES ($1, $2, $3, $4) RETURNING *',
-//       [name, email, phone, hashedPassword]
-//     );
-
-//     const newUser = newUserResult.rows[0];
-
-//     // Conditionally create EmployeeMapping (Skip if role is 'user')
-//     if (roleResult.rows[0].name.toLowerCase() !== 'user') {
-//       const employeeMappingResult = await pool.query(
-//         'INSERT INTO employee_mappings (user_id, role_id, restaurant_id, branch_id) VALUES ($1, $2, $3, $4) RETURNING *',
-//         [newUser.id, role_id, restaurant_id, branch_id]
-//       );
-//       const employeeMapping = employeeMappingResult.rows[0];
-//     }
-
-//     // Return the created staff user details
-//     res.status(201).json({
-//       id: newUser.id,
-//       name: newUser.name,
-//       email: newUser.email,
-//       phone: newUser.phone,
-//       restaurant_id: restaurant_id || null,
-//       branch_id: branch_id || null,
-//       role_id,
-//       created_at: newUser.created_at,
-//       updated_at: newUser.updated_at,
-//     });
-//   } catch (error) {
-//     console.error('Error creating staff user:', error);
-//     res.status(500).json({ message: 'Error creating staff user', error: error.message });
-//   }
-// });
-
 router.get('/users', async (req, res) => {
   const limit = parseInt(req.query.limit) || 20;  // Default to 20 if no limit is provided
   const offset = parseInt(req.query.offset) || 0;  // Default to 0 if no offset is provided
@@ -281,6 +225,57 @@ router.delete('/users/:user_id', LoggedInUser, async (req, res) => {
   } catch (error) {
     console.error('Error deleting user:', error);
     res.status(500).json({ message: 'Failed to delete user', error: error.message });
+  }
+});
+
+router.post('/create_staff_user', async (req, res) => {
+  const { name, email, phone, password, role_id, restaurant_id, branch_id } = req.body;
+
+  try {
+    // Check if email is already registered
+    const existingUser = await getUserByEmail(email);
+    if (existingUser) {
+      return res.status(400).json({ detail: 'Email already registered' });
+    }
+
+    // Validate role
+    const role = await getRoleById(role_id);
+    if (!role) {
+      return res.status(400).json({ detail: 'Invalid role ID' });
+    }
+
+    // Hash password
+    const hashedPassword = await hashPassword(password);
+
+    // Create user
+    const newUser = await createStaffUser(name, email, phone, hashedPassword);
+
+    // Only create employee_mapping if role is not "user"
+    let employeeMapping = null;
+    if (role.name.toLowerCase() !== 'user') {
+      employeeMapping = await createEmployeeMapping(
+        newUser.id,
+        role_id,
+        restaurant_id || null,
+        branch_id || null
+      );
+    }
+
+    res.status(201).json({
+      id: newUser.id,
+      name: newUser.name,
+      email: newUser.email,
+      phone: newUser.phone,
+      restaurant_id: employeeMapping?.restaurant_id || null,
+      branch_id: employeeMapping?.branch_id || null,
+      role_id,
+      created_at: newUser.created_at,
+      updated_at: newUser.updated_at
+    });
+
+  } catch (error) {
+    console.error('Error creating staff user:', error);
+    res.status(500).json({ detail: `Error creating staff user: ${error.message}` });
   }
 });
 

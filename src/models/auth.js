@@ -12,7 +12,7 @@ export const createUser = async (name, email, phone, hashedPassword) => {
 // Find user by email
 export const findUserByEmail = async (email) => {
   const query = `
-    SELECT u.email,u.password,r.name AS role_name
+    SELECT u.id,u.email,u.password,r.name AS role_name
     FROM users u
     JOIN employee_mappings em ON em.user_id = u.id
     JOIN roles r ON r.id = em.role_id
@@ -121,20 +121,35 @@ export const updateUserPassword = async (userId, hashedPassword) => {
     return result.rows[0];  // Return the "admin" role if found, otherwise undefined
   };
 
-  export const checkIfUserIsAdmin = async (userId) => {
-    const query = `
-      SELECT * FROM employee_mappings
-      WHERE user_id = $1 AND role_id = (SELECT id FROM roles WHERE name = 'admin')
-    `;
-    const result = await pool.query(query, [userId]);
-    return result.rows.length > 0;  // Return true if the user is already an admin
+  export const createStaffUser = async (name, email, phone, hashedPassword) => {
+    const result = await pool.query(
+      `INSERT INTO users (name, email, phone, password) 
+       VALUES ($1, $2, $3, $4) 
+       RETURNING *`,
+      [name, email, phone, hashedPassword]
+    );
+    return result.rows[0];
   };
-
-  export const assignAdminRoleToUser = async (userId, roleId) => {
-    const query = `
-      INSERT INTO employee_mappings (user_id, role_id)
-      VALUES ($1, $2) RETURNING *
-    `;
-    const result = await pool.query(query, [userId, roleId]);
-    return result.rows[0];  // Return the inserted mapping record
+  
+  // Get user by email
+  export const getUserByEmail = async (email) => {
+    const result = await pool.query(`SELECT * FROM users WHERE email = $1`, [email]);
+    return result.rows[0];
+  };
+  
+  // Get role by ID
+  export const getRoleById = async (roleId) => {
+    const result = await pool.query(`SELECT * FROM roles WHERE id = $1`, [roleId]);
+    return result.rows[0];
+  };
+  
+  // Create employee mapping
+  export const createEmployeeMapping = async (userId, roleId, restaurantId, branchId) => {
+    const result = await pool.query(
+      `INSERT INTO employee_mappings (user_id, role_id, restaurant_id, branch_id)
+       VALUES ($1, $2, $3, $4)
+       RETURNING *`,
+      [userId, roleId, restaurantId, branchId]
+    );
+    return result.rows[0];
   };

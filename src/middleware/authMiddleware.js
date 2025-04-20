@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
-import { findUserByEmail } from '../models/user.js'; // Assuming the user model has this function
+import { findUserByEmail } from '../models/auth.js'; // Assuming the user model has this function
 
 dotenv.config();
 

@@ -1,10 +1,7 @@
 import express from 'express';
-import { checkAdminPermission } from '../middleware/permission.js'; // Permissions middleware
 import { getExistingCuisines, createCuisines } from '../models/cuisine.js'; // Import model functions
-import { findUserById, findAdminRole, checkIfUserIsAdmin, assignAdminRoleToUser } from '../models/user.js';  // Import model functions
 import {LoggedInUser} from '../middleware/authMiddleware.js';
 import multer from 'multer'
-import cloudinary from '../config/cloudinary.js';  // Cloudinary configuration
 
 import { validateCuisines, createRestaurant, associateCuisinesWithRestaurant, getTotalRestaurantCount,getRestaurants, 
   getRestaurantById, getCuisinesByIds, updateRestaurantDetails, updateRestaurantCuisines} from '../models/restaurant.js';  // Import functions
@@ -45,7 +42,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-router.post('/create-default-cuisines', LoggedInUser,checkAdminPermission, async (req, res) => {
+router.post('/create-default-cuisines', async (req, res) => {
   const cuisineChoices = [
     "Italian", "Chinese", "Indian", "Mexican", "American",
     "French", "Japanese", "Mediterranean", "Thai", "Spanish"
@@ -67,39 +64,6 @@ router.post('/create-default-cuisines', LoggedInUser,checkAdminPermission, async
   } catch (error) {
     console.error('Error creating default cuisines:', error);
     res.status(500).json({ message: 'Failed to create default cuisines' });
-  }
-});
-
-router.post('/assign-admin/:user_id',LoggedInUser,checkAdminPermission,async (req, res) => {
-  const userId = parseInt(req.params.user_id);  // Get user_id from the request parameters
-
-  try {
-    // 1. Check if the user exists
-    const user = await findUserById(userId);
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-
-    // 2. Check if the "admin" role exists
-    const adminRole = await findAdminRole();
-    if (!adminRole) {
-      return res.status(404).json({ message: 'Admin role does not exist' });
-    }
-
-    // 3. Check if the user is already an admin
-    const isUserAdmin = await checkIfUserIsAdmin(userId);
-    if (isUserAdmin) {
-      return res.status(400).json({ message: 'User is already an admin' });
-    }
-
-    // 4. Assign the "admin" role to the user
-    await assignAdminRoleToUser(userId, adminRole.id);
-
-    // Respond with success message
-    res.json({ message: 'Admin role assigned to user successfully' });
-  } catch (error) {
-    console.error('Error assigning admin role:', error);
-    res.status(500).json({ message: 'Error assigning admin role', error: error.message });
   }
 });
 
